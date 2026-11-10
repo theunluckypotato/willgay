@@ -4,18 +4,16 @@ import discord
 from discord.ext import commands
 import yt_dlp
 
-# 1. SETUP LOGISTICS & INTENTS
+# 1. SETUP INTENTS
 intents = discord.Intents.default()
 intents.message_content = True
-intents.voice_states = True  # Required to track, join, and stay inside voice channels
+intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 2. CONFIGURATION VARIABLES
-TOKEN = "MTU2OTc3NTAwMjc4ODU2NTAyMw.G-sywW.kVOx-yi7rgj2hzqhEQn86Fsy6A4uoO8grBuaJM"
-VOICE_CHANNEL_ID = 1515034746659274822  
-
-# 24/7 Lofi YouTube Link
-STREAM_URL = "https://www.youtube.com/watch?v=qH3fETPsqXU" 
+TOKEN = os.getenv("DISCORD_TOKEN")
+VOICE_CHANNEL_ID = 1515034746659274822
+STREAM_URL = "https://youtube.com"
 
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
@@ -30,14 +28,20 @@ FFMPEG_OPTIONS = {
     'options': '-vn -bufsize 2000k'
 }
 
+# Prevents multiple audio loops from running at the same time
+playback_task = None
+
 @bot.event
 async def on_ready():
+    global playback_task
     print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
     print('------')
     
     channel = bot.get_channel(VOICE_CHANNEL_ID)
     if channel and isinstance(channel, discord.VoiceChannel):
-        asyncio.create_task(keep_alive_playback(channel))
+        # Only start the music loop if it is not already running
+        if playback_task is None or playback_task.done():
+            playback_task = asyncio.create_task(keep_alive_playback(channel))
     else:
         print("Error: Could not find voice channel. Check your VOICE_CHANNEL_ID.")
 
@@ -48,12 +52,12 @@ async def keep_alive_playback(channel):
     while True:
         try:
             vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
-            if not vc:
-                vc = await channel.connect()
+            if not vc or not vc.is_connected():
+                vc = await channel.connect(self_deaf=True)
             
-            if not vc.is_playing():
-                print(f"Extracting streaming audio from YouTube source...")
-                loop = asyncio.get_event_loop()
+            if not vc.is_playing() and not vc.is_paused():
+                print("Extracting streaming audio from YouTube source...")
+                loop = asyncio.get_running_loop()
                 data = await loop.run_in_executor(None, lambda: ytdl.extract_info(STREAM_URL, download=False))
                 
                 url = data['url']
@@ -69,15 +73,26 @@ async def keep_alive_playback(channel):
 
 @bot.command()
 async def join(ctx):
+    global playback_task
     if ctx.author.voice:
         channel = ctx.author.voice.channel
-        await channel.connect()
-        asyncio.create_task(keep_alive_playback(channel))
+        if playback_task is None or playback_task.done():
+            playback_task = asyncio.create_task(keep_alive_playback(channel))
+        await ctx.send(f"Joined **{channel.name}** and started 24/7 radio.")
+    else:
+        await ctx.send("You need to be in a voice channel first!")
 
 @bot.command()
 async def stop(ctx):
+    global playback_task
+    if playback_task and not playback_task.done():
+        playback_task.cancel()
+        playback_task = None
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
+        await ctx.send("Disconnected and stopped the radio.")
 
-bot.run(os.getenv("DISCORD_TOKEN"))
-
+if TOKEN:
+    bot.run(TOKEN)
+else:
+    print("CRITICAL ERROR: DISCORD_TOKEN is missing! Add it in the Environment tab.")
