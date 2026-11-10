@@ -2,7 +2,6 @@ import os
 import asyncio
 import discord
 from discord.ext import commands
-import yt_dlp
 
 # 1. SETUP INTENTS
 intents = discord.Intents.default()
@@ -13,83 +12,57 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # 2. CONFIGURATION VARIABLES
 TOKEN = os.getenv("DISCORD_TOKEN")
 VOICE_CHANNEL_ID = 1515034746659274822
-STREAM_URL = "https://youtube.com"
 
-YTDL_OPTIONS = {
-    'format': 'bestaudio/best',
-    'noplaylist': True,
-    'quiet': True,
-    'no_warnings': True,
-    'extract_flat': False
-}
-
-FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn -bufsize 2000k'
-}
-
-# Prevents multiple audio loops from running at the same time
-playback_task = None
+keep_alive_task = None
 
 @bot.event
 async def on_ready():
-    global playback_task
+    global keep_alive_task
     print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
     print('------')
     
     channel = bot.get_channel(VOICE_CHANNEL_ID)
     if channel and isinstance(channel, discord.VoiceChannel):
-        if playback_task is None or playback_task.done():
-            playback_task = asyncio.create_task(keep_alive_playback(channel))
+        if keep_alive_task is None or keep_alive_task.done():
+            keep_alive_task = asyncio.create_task(stay_in_voice(channel))
     else:
         print("Error: Could not find voice channel. Check your VOICE_CHANNEL_ID.")
 
-async def keep_alive_playback(channel):
-    """Looping task that keeps the bot connected and playing 24/7"""
-    ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
-    
+async def stay_in_voice(channel):
+    """Looping task that ensures the bot stays connected 24/7"""
     while True:
         try:
             vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
             if not vc or not vc.is_connected():
-                vc = await channel.connect(self_deaf=False)
-            
-            if not vc.is_playing() and not vc.is_paused():
-                print("Extracting streaming audio from YouTube source...")
-                loop = asyncio.get_running_loop()
-                data = await loop.run_in_executor(None, lambda: ytdl.extract_info(STREAM_URL, download=False))
-                
-                url = data['url']
-                print(f"Starting 24/7 playback stream in {channel.name}...")
-                
-                source = discord.FFmpegPCMAudio(url, **FFMPEG_OPTIONS)
-                vc.play(source)
+                print(f"Connecting to {channel.name}...")
+                await channel.connect(self_deaf=False)
+                print(f"Successfully connected to {channel.name} 24/7!")
                 
         except Exception as e:
-            print(f"Playback error encountered: {e}. Reconnecting in 10 seconds...")
+            print(f"Connection error: {e}. Retrying in 10 seconds...")
             
         await asyncio.sleep(10)
 
 @bot.command()
 async def join(ctx):
-    global playback_task
+    global keep_alive_task
     if ctx.author.voice:
         channel = ctx.author.voice.channel
-        if playback_task is None or playback_task.done():
-            playback_task = asyncio.create_task(keep_alive_playback(channel))
-        await ctx.send(f"Joined **{channel.name}** and started 24/7 radio.")
+        if keep_alive_task is None or keep_alive_task.done():
+            keep_alive_task = asyncio.create_task(stay_in_voice(channel))
+        await ctx.send(f"Joined **{channel.name}** and staying 24/7.")
     else:
         await ctx.send("You need to be in a voice channel first!")
 
 @bot.command()
 async def stop(ctx):
-    global playback_task
-    if playback_task and not playback_task.done():
-        playback_task.cancel()
-        playback_task = None
+    global keep_alive_task
+    if keep_alive_task and not keep_alive_task.done():
+        keep_alive_task.cancel()
+        keep_alive_task = None
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
-        await ctx.send("Disconnected and stopped the radio.")
+        await ctx.send("Disconnected from the voice channel.")
 
 if TOKEN:
     bot.run(TOKEN)
