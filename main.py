@@ -80,5 +80,6 @@ async def stop(ctx):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
 
-bot.run(TOKEN)
+bot.run(os.getenv("MTU2OTc3NTAwMjc4ODU2NTAyMw.Gg4dRh.ia2cQPx2wSzUOif6ooV1PLGVQpcLBj00Dk7mlo"))
+
 
