@@ -7,12 +7,11 @@ import yt_dlp
 # 1. SETUP LOGISTICS & INTENTS
 intents = discord.Intents.default()
 intents.message_content = True
-intents.voice_states = True # Fixed: Keeps track of voice state connections
+intents.voice_states = True  # Required to track, join, and stay inside voice channels
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 2. CONFIGURATION VARIABLES
-# Pulled securely from the environment tab so your token never leaks again
-TOKEN = os.getenv("MTU2OTc3NTAwMjc4ODU2NTAyMw.Gg4dRh.ia2cQPx2wSzUOif6ooV1PLGVQpcLBj00Dk7mlo") 
+TOKEN = "MTU2OTc3NTAwMjc4ODU2NTAyMw.Gg4dRh.ia2cQPx2wSzUOif6ooV1PLGVQpcLBj00Dk7mlo"
 VOICE_CHANNEL_ID = 1515034746659274822  
 
 # 24/7 Lofi YouTube Link
@@ -80,8 +79,4 @@ async def stop(ctx):
     if ctx.voice_client:
         await ctx.voice_client.disconnect()
 
-# Make sure to double-check the physical label/value in your dashboard's Environment tab to verify DISCORD_TOKEN is set!
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("CRITICAL ERROR: The DISCORD_TOKEN environment variable is missing in the dashboard's Env tab.")
+bot.run(TOKEN)
