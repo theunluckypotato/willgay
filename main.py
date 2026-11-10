@@ -11,7 +11,7 @@ intents.voice_states = True  # Required to track, join, and stay inside voice ch
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 2. CONFIGURATION VARIABLES
-TOKEN = "MTU2OTc3NTAwMjc4ODU2NTAyMw.Gg4dRh.ia2cQPx2wSzUOif6ooV1PLGVQpcLBj00Dk7mlo"
+TOKEN = "MTU2OTc3NTAwMjc4ODU2NTAyMw.G-sywW.kVOx-yi7rgj2hzqhEQn86Fsy6A4uoO8grBuaJM"
 VOICE_CHANNEL_ID = 1515034746659274822  
 
 # 24/7 Lofi YouTube Link
