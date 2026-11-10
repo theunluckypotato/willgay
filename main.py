@@ -39,7 +39,6 @@ async def on_ready():
     
     channel = bot.get_channel(VOICE_CHANNEL_ID)
     if channel and isinstance(channel, discord.VoiceChannel):
-        # Only start the music loop if it is not already running
         if playback_task is None or playback_task.done():
             playback_task = asyncio.create_task(keep_alive_playback(channel))
     else:
@@ -53,7 +52,7 @@ async def keep_alive_playback(channel):
         try:
             vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
             if not vc or not vc.is_connected():
-                vc = await channel.connect(self_deaf=True)
+                vc = await channel.connect(self_deaf=False)
             
             if not vc.is_playing() and not vc.is_paused():
                 print("Extracting streaming audio from YouTube source...")
